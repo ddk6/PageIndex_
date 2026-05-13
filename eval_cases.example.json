@@ -1,0 +1,147 @@
+[
+  {
+    "id": "meta_author",
+    "question": "这篇论文的作者是谁？",
+    "must_contain": ["董德坤"]
+  },
+  {
+    "id": "meta_title",
+    "question": "这篇论文的题目是什么？",
+    "must_contain": ["基于", "YOLOv5", "番茄成熟度检测"]
+  },
+  {
+    "id": "doc_type_school",
+    "question": "这份文档属于什么类型？文中出现了哪所学校？",
+    "must_contain": ["本科毕业论文", "山西农业大学"]
+  },
+  {
+    "id": "research_goal",
+    "question": "本文主要想解决什么问题？",
+    "must_contain": ["番茄", "成熟度", "检测"]
+  },
+  {
+    "id": "research_background_value",
+    "question": "为什么番茄成熟度检测具有研究意义？请从生产效率和采摘决策角度回答。",
+    "must_contain": ["生产效率", "最佳收获时间"],
+    "any_contain": ["过早", "过晚", "品质", "产量"]
+  },
+  {
+    "id": "dataset_size",
+    "question": "本文最终构建的数据集包含多少张番茄图片？",
+    "any_contain": ["4171", "4,171"]
+  },
+  {
+    "id": "dataset_source",
+    "question": "这些番茄图片数据是如何形成最终数据集的？",
+    "must_contain": ["三批", "人工标注"],
+    "any_contain": ["4171", "4,171"]
+  },
+  {
+    "id": "class_labels",
+    "question": "本文为了简化任务，把番茄类别固定成哪两类？",
+    "must_contain": ["成熟", "非成熟"],
+    "any_contain": ["ripe", "unripe"]
+  },
+  {
+    "id": "keywords",
+    "question": "论文关键词包含哪些技术或任务名称？至少说出四个。",
+    "must_contain": ["YOLOv5", "成熟度检测", "注意力机制", "NWD"],
+    "any_contain": ["C2f", "损失函数"]
+  },
+  {
+    "id": "main_improvements",
+    "question": "本文对YOLOv5主要做了哪些改进？",
+    "must_contain": ["CBAM", "Biformer", "C2f", "NWD"]
+  },
+  {
+    "id": "cbam_role",
+    "question": "CBAM注意力机制在本文中的作用是什么？",
+    "must_contain": ["CBAM"],
+    "any_contain": ["专注", "有意义", "特征", "注意力"]
+  },
+  {
+    "id": "biformer_role",
+    "question": "Biformer注意力机制主要被用来改善什么？",
+    "must_contain": ["Biformer"],
+    "any_contain": ["处理效率", "检测表现", "效率", "性能"]
+  },
+  {
+    "id": "c2f_replacement",
+    "question": "本文用YOLOv8中的哪个模块替换了YOLOv5颈部网络的C3模块？目的是什么？",
+    "must_contain": ["C2f", "C3"],
+    "any_contain": ["特征融合", "轻量化", "性能", "效率"]
+  },
+  {
+    "id": "nwd_purpose",
+    "question": "为什么本文要引入NWD损失函数？",
+    "must_contain": ["NWD"],
+    "any_contain": ["小目标", "检测精度", "mAP@.5:.95"]
+  },
+  {
+    "id": "best_model_summary",
+    "question": "综合实验和检测效果对比后，本文认为哪个改进组合整体效果最优？",
+    "must_contain": ["NWD", "CBAM", "C2f"],
+    "not_contain": ["Biformer+C2f 的组合最优"]
+  },
+  {
+    "id": "best_model_accuracy",
+    "question": "摘要中提到表现最好的改进YOLOv5模型检测精度达到多少？相比原模型提高多少？",
+    "must_contain": ["95", "0.014"]
+  },
+  {
+    "id": "table5_nwd_c2f_all_metrics",
+    "question": "表5中加入NWD+C2f模块后的all类别指标大致是多少？请回答P、R、mAP@.5和mAP@.5:.95。",
+    "must_contain": ["0.942", "0.961", "0.987", "0.803"]
+  },
+  {
+    "id": "table5_labels",
+    "question": "表5中all类别对应的Images和labels分别是多少？",
+    "must_contain": ["873", "1046"]
+  },
+  {
+    "id": "nwd_only_map_improvement",
+    "question": "表6分析中，哪个单独改进在mAP@.5:.95指标上的提升非常显著？",
+    "must_contain": ["NWD"],
+    "any_contain": ["mAP@.5:.95", "显著"]
+  },
+  {
+    "id": "metric_largest_variation",
+    "question": "该论文中各个模型之间指标对比浮动最大是哪个指标？请根据最终综合实验表中的数值计算判断。",
+    "must_contain": ["P"],
+    "any_contain": ["0.032", "0.928", "0.960", "浮动", "差值"]
+  },
+  {
+    "id": "detection_failure_before_adjustment",
+    "question": "第一次加入NWD损失函数和CBAM注意力机制后，在视频检测中还存在什么问题？",
+    "any_contain": ["聚集", "叶片", "非成熟", "误识别", "无法有效识别"]
+  },
+  {
+    "id": "overfitting_combo",
+    "question": "检测效果分析中，哪个复杂组合被指出存在过拟合现象？",
+    "must_contain": ["NWD", "CBAM", "Biformer", "C2f"],
+    "any_contain": ["过拟合", "过度学习"]
+  },
+  {
+    "id": "repeated_boxes_issue",
+    "question": "文中提到哪些改进模型出现了对同一目标的多个重叠检测框？",
+    "must_contain": ["CBAM"],
+    "any_contain": ["CBAM+Biformer", "重叠", "NMS"]
+  },
+  {
+    "id": "future_lightweight",
+    "question": "论文未来工作中提到了哪些轻量化或部署相关方向？",
+    "any_contain": ["轻量化", "模型压缩", "知识蒸馏", "嵌入式", "实时应用"]
+  },
+  {
+    "id": "future_ui",
+    "question": "论文未来是否计划做用户界面？提到了哪些Python界面开发工具？",
+    "must_contain": ["用户界面"],
+    "any_contain": ["PySide6", "PYQT"]
+  },
+  {
+    "id": "negative_no_transformer_only",
+    "question": "本文是否只使用Transformer方法完成番茄成熟度检测？请根据文档回答。",
+    "must_contain": ["不是"],
+    "any_contain": ["YOLOv5", "CBAM", "Biformer", "C2f", "NWD"]
+  }
+]

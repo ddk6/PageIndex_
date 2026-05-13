@@ -1,0 +1,79 @@
+{
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "accuracy": 1.0
+  },
+  "config": {
+    "json_path": "./results/Yolov5_structure.json",
+    "cases": "eval_cases.example.json",
+    "judge": "contains"
+  },
+  "results": [
+    {
+      "id": "author",
+      "question": "论文作者是谁？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0001"
+      ],
+      "answer": "论文作者是董德坤。"
+    },
+    {
+      "id": "dataset_size",
+      "question": "本文数据集有多少张图片？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0004",
+        "0005"
+      ],
+      "answer": "根据提供的上下文，本文数据集共有4171张图片。"
+    },
+    {
+      "id": "best_model",
+      "question": "本文效果最优的改进模型组合是什么？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0035",
+        "0036",
+        "0037"
+      ],
+      "answer": "根据提供的上下文，本文效果最优的改进模型组合是：加入NWD损失函数+CBAM注意力机制+C2f模块的改进模型。上下文明确指出：“综合消融实验对比和检测结果对比得出，加入NWD损失函数+CBAM注意力机制+C2f模块的改进模型是所有改进模型中检测效果最优的”。"
+    },
+    {
+      "id": "accuracy_improvement",
+      "question": "最优模型相比原模型精确度提高了多少？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0036",
+        "0037"
+      ],
+      "answer": "根据提供的上下文，最优模型相比原模型精确度提高了0.014。"
+    },
+    {
+      "id": "future_work",
+      "question": "论文未来工作有哪些？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0037",
+        "0036",
+        "0035"
+      ],
+      "answer": "根据提供的上下文，论文的未来工作包括：\n\n1. 进一步探索更高效的轻量化设计，尝试引入更为先进的模型压缩技术和知识蒸馏策略，使得算法在保持高检测精度的同时，减少计算量和内存占用，更适合于资源有限的嵌入式设备和实时应用。\n2. 研究更多样化的数据增强策略，并考虑引入自适应学习率调整机制，让模型在训练过程中能更有效地利用训练数据，特别是在面对复杂光照、背景变化等实际应用场景时。\n3. 结合PySide6等界面开发工具，优化用户交互体验，开发易于操作的前端系统，以便农业工作者直接使用，实现快速、直观的成熟度检测反馈。\n4. 采用Python语言下的PYQT库来创建用户界面。"
+    }
+  ]
+}

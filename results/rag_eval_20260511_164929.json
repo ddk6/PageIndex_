@@ -1,0 +1,334 @@
+{
+  "summary": {
+    "total": 25,
+    "passed": 20,
+    "failed": 5,
+    "accuracy": 0.8
+  },
+  "config": {
+    "json_path": "./results/Yolov5_structure.json",
+    "cases": "eval_cases.example.json",
+    "judge": "contains"
+  },
+  "results": [
+    {
+      "id": "meta_author",
+      "question": "这篇论文的作者是谁？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0001"
+      ],
+      "answer": "论文作者是董德坤。"
+    },
+    {
+      "id": "meta_title",
+      "question": "这篇论文的题目是什么？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0001"
+      ],
+      "answer": "根据提供的上下文，这篇论文的题目是《基于YOLOv5的番茄成熟度检测》。"
+    },
+    {
+      "id": "doc_type_school",
+      "question": "这份文档属于什么类型？文中出现了哪所学校？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0001"
+      ],
+      "answer": "根据提供的上下文，这份文档属于“本科毕业论文（设计）”，文中出现的学校是“山西农业大学”。"
+    },
+    {
+      "id": "research_goal",
+      "question": "本文主要想解决什么问题？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0006",
+        "0037"
+      ],
+      "answer": "根据提供的上下文，本文主要想解决的问题是：实现番茄成熟度的准确检测，以提高番茄产业智能化、系统化水平，并解决传统人工检测耗时耗力、容易出现误差的问题。"
+    },
+    {
+      "id": "research_background_value",
+      "question": "为什么番茄成熟度检测具有研究意义？请从生产效率和采摘决策角度回答。",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0002",
+        "0001",
+        "0000"
+      ],
+      "answer": "根据提供的上下文，从生产效率和采摘决策角度，番茄成熟度检测的研究意义在于：通过研究番茄成熟度检测技术，可以准确判断番茄的成熟程度，帮助农民更快速地了解番茄成熟度情况，从而提高生产效率；同时，帮助农民确定最佳收获时间，避免过早或过晚采摘导致产量损失或品质下降。"
+    },
+    {
+      "id": "dataset_size",
+      "question": "本文最终构建的数据集包含多少张番茄图片？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0004",
+        "0006"
+      ],
+      "answer": "根据提供的上下文，本文最终构建的数据集包含4171张番茄图片。"
+    },
+    {
+      "id": "dataset_source",
+      "question": "这些番茄图片数据是如何形成最终数据集的？",
+      "passed": false,
+      "grade_method": "contains",
+      "grade_reason": "missing must_contain: ['人工标注']; none of any_contain matched: ['4171', '4,171']",
+      "node_list": [
+        "0008",
+        "0009",
+        "0010"
+      ],
+      "answer": "根据提供的上下文，这些番茄图片数据形成最终数据集的过程如下：数据集共分三批采集，包含不同天气、时间段、果实叠加度、枝叶遮挡度、背景环境等复杂情景的图片。之后，对图片进行重命名预处理，并使用LabelImg软件对图像中的番茄果实进行边界框标注，将成熟度分为“ripe（成熟）”和“unripe（非成熟）”两类，遮挡面积超过40%的番茄果实不被标注。标注信息以“.txt”格式文件保存，最终形成用于模型训练的数据集。"
+    },
+    {
+      "id": "class_labels",
+      "question": "本文为了简化任务，把番茄类别固定成哪两类？",
+      "passed": false,
+      "grade_method": "contains",
+      "grade_reason": "none of any_contain matched: ['ripe', 'unripe']",
+      "node_list": [
+        "0008",
+        "0009",
+        "0010"
+      ],
+      "answer": "根据提供的上下文，本文为了简化任务，把番茄类别固定成“成熟期”和“非成熟期”两类。"
+    },
+    {
+      "id": "keywords",
+      "question": "论文关键词包含哪些技术或任务名称？至少说出四个。",
+      "passed": false,
+      "grade_method": "contains",
+      "grade_reason": "missing must_contain: ['成熟度检测', '注意力机制']",
+      "node_list": [
+        "0020",
+        "0021",
+        "0022"
+      ],
+      "answer": "根据提供的上下文，论文关键词包含的技术或任务名称有：YOLOv5、CBAM、NWD、Biformer、C2f。"
+    },
+    {
+      "id": "main_improvements",
+      "question": "本文对YOLOv5主要做了哪些改进？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0026",
+        "0019",
+        "0020"
+      ],
+      "answer": "根据提供的上下文，本文对YOLOv5主要做了以下改进：\n1. 将颈部网络的C3模块替换成YOLOv8中的C2f模块。\n2. 在颈部网络中增加一层CBAM模块或者Biformer模块。\n3. 添加了NWD损失函数。"
+    },
+    {
+      "id": "cbam_role",
+      "question": "CBAM注意力机制在本文中的作用是什么？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0020",
+        "0000",
+        "0035"
+      ],
+      "answer": "根据提供的上下文，CBAM注意力机制在本文中的作用是：引导网络更加专注于图像中有意义的部分，提高模型对番茄特征的学习能力以及整体检测的准确性与可靠性（第1-3页摘要部分）。此外，它通过动态调整不同通道和空间位置的权重，增强网络对关键特征的学习，提高特征表示能力、计算效率和泛化能力（第11-13页）。"
+    },
+    {
+      "id": "biformer_role",
+      "question": "Biformer注意力机制主要被用来改善什么？",
+      "passed": false,
+      "grade_method": "contains",
+      "grade_reason": "none of any_contain matched: ['处理效率', '检测表现', '效率', '性能']",
+      "node_list": [
+        "0022",
+        "0023",
+        "0024"
+      ],
+      "answer": "根据提供的上下文，Biformer注意力机制主要被用来改善**减少内存占用**和**降低计算成本**。"
+    },
+    {
+      "id": "c2f_replacement",
+      "question": "本文用YOLOv8中的哪个模块替换了YOLOv5颈部网络的C3模块？目的是什么？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0025",
+        "0026"
+      ],
+      "answer": "根据提供的上下文，本文用YOLOv8中的**C2f模块**替换了YOLOv5颈部网络的C3模块。目的是**在保持轻量化的同时，通过C2f更有效的特征融合机制，进一步平衡模型的性能与效率**。"
+    },
+    {
+      "id": "nwd_purpose",
+      "question": "为什么本文要引入NWD损失函数？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0021",
+        "0026",
+        "0031"
+      ],
+      "answer": "根据提供的上下文，本文引入NWD损失函数的原因是：**为了提升模型对小目标的检测能力**。上下文明确指出：“NWD的加入，使得模型对小目标检测能力得到了很大提升”（第12页），并且“NWD损失函数能够在训练过程中给予小目标更多的关注，优化过程中不仅考虑位置的准确性，还考虑到目标尺度的精确匹配，从而显著提高了对小目标检测的精度和稳定性”（第12页）。"
+    },
+    {
+      "id": "best_model_summary",
+      "question": "综合实验和检测效果对比后，本文认为哪个改进组合整体效果最优？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0035",
+        "0036",
+        "0037"
+      ],
+      "answer": "根据提供的上下文，综合实验和检测效果对比后，本文认为加入NWD损失函数+CBAM注意力机制+C2f模块的改进模型是所有改进模型中检测效果最优的。"
+    },
+    {
+      "id": "best_model_accuracy",
+      "question": "摘要中提到表现最好的改进YOLOv5模型检测精度达到多少？相比原模型提高多少？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0000",
+        "0036",
+        "0037"
+      ],
+      "answer": "根据提供的上下文，摘要中提到表现最好的改进YOLOv5模型检测精度达到了95%，相比原模型提高了0.014。"
+    },
+    {
+      "id": "table5_nwd_c2f_all_metrics",
+      "question": "表5中加入NWD+C2f模块后的all类别指标大致是多少？请回答P、R、mAP@.5和mAP@.5:.95。",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0034",
+        "0035",
+        "0027"
+      ],
+      "answer": "根据提供的上下文，表5中“all”类别的指标为：P=0.942，R=0.961，mAP@.5=0.987，mAP@.5:.95=0.803。"
+    },
+    {
+      "id": "table5_labels",
+      "question": "表5中all类别对应的Images和labels分别是多少？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0035",
+        "0030",
+        "0034"
+      ],
+      "answer": "根据提供的上下文，表5中all类别对应的Images是873，labels是1046。"
+    },
+    {
+      "id": "nwd_only_map_improvement",
+      "question": "表6分析中，哪个单独改进在mAP@.5:.95指标上的提升非常显著？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0035",
+        "0031",
+        "0030"
+      ],
+      "answer": "根据提供的上下文，表6分析中，只加入NWD损失函数的改进模型在mAP@.5:.95指标上的提升非常显著。"
+    },
+    {
+      "id": "detection_failure_before_adjustment",
+      "question": "第一次加入NWD损失函数和CBAM注意力机制后，在视频检测中还存在什么问题？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0036",
+        "0033",
+        "0035"
+      ],
+      "answer": "根据提供的上下文，在第一次加入NWD损失函数和CBAM注意力机制时，对番茄视频检测存在以下问题：无法有效识别聚集在一起的番茄，或者将其标识为一个，并且对部分非成熟番茄和番茄叶片的分辨度不高，甚至将某些叶片识别为未成熟的番茄。"
+    },
+    {
+      "id": "overfitting_combo",
+      "question": "检测效果分析中，哪个复杂组合被指出存在过拟合现象？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0036",
+        "0032",
+        "0033"
+      ],
+      "answer": "根据提供的上下文，NWD+CBAM+Biformer+C2f 的改进模型被指出存在过拟合现象。"
+    },
+    {
+      "id": "repeated_boxes_issue",
+      "question": "文中提到哪些改进模型出现了对同一目标的多个重叠检测框？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0036",
+        "0035",
+        "0033"
+      ],
+      "answer": "根据提供的上下文，文中提到“加入 CBAM改进的模型和加入 CBAM+Biformer 的改进模型出现了对同一目标的的多个重叠检测框”。"
+    },
+    {
+      "id": "future_lightweight",
+      "question": "论文未来工作中提到了哪些轻量化或部署相关方向？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0037",
+        "0036"
+      ],
+      "answer": "根据提供的上下文，未来工作中提到的轻量化或部署相关方向是：**进一步探索更高效的轻量化设计，尝试引入更为先进的模型压缩技术和知识蒸馏策略**，以使算法减少计算量和内存占用，更适合于资源有限的嵌入式设备和实时应用。"
+    },
+    {
+      "id": "future_ui",
+      "question": "论文未来是否计划做用户界面？提到了哪些Python界面开发工具？",
+      "passed": true,
+      "grade_method": "contains",
+      "grade_reason": "matched expected keywords",
+      "node_list": [
+        "0037"
+      ],
+      "answer": "根据提供的上下文，论文未来计划做用户界面。文中提到：“本文注重理论算法方面的实验，并没有结合PySide6等界面开发工具，优化用户交互体验，开发易于操作的前端系统……同时也没有采用Python语言下的PYQT库来创建用户界面，这些均是本文尚未完成的任务和展望”。因此，提到的Python界面开发工具是**PySide6**和**PYQT库**。"
+    },
+    {
+      "id": "negative_no_transformer_only",
+      "question": "本文是否只使用Transformer方法完成番茄成熟度检测？请根据文档回答。",
+      "passed": false,
+      "grade_method": "contains",
+      "grade_reason": "missing must_contain: ['不是']",
+      "node_list": [
+        "0019",
+        "0022",
+        "0026"
+      ],
+      "answer": "根据提供的上下文，本文基于改进的YOLOv5s进行番茄成熟度检测，其中使用了CBAM注意力模块、NWD损失函数、Biformer模块以及C2f模块等多种方法，并非只使用Transformer方法。因此，根据提供的上下文无法找到答案。"
+    }
+  ]
+}
