@@ -30,26 +30,44 @@ def count_tokens(text, model=None):
 
 
 #负责真正请求模型接口
+#同步调用 LLM 的统一封装函数
+# 给定 model + prompt
+# 调用 litellm.completion()
+# 拿到模型回复
+# 失败时最多重试 10 次
+# 最后返回模型文本内容
+
+#输入：
+# model：模型名，比如 "gpt-4o-mini"，或者 "litellm/gpt-4o-mini"。
+# prompt：本次要发给模型的用户提示词。
+# chat_history：可选，历史对话消息。
+# return_finish_reason：是否同时返回模型结束原因。
+
 def llm_completion(model, prompt, chat_history=None, return_finish_reason=False):
     if model:
         model = model.removeprefix("litellm/")
-    max_retries = 10
+    max_retries = 10#最多的重试次数
+    #构造messages 聊天消息列表
     messages = list(chat_history) + [{"role": "user", "content": prompt}] if chat_history else [{"role": "user", "content": prompt}]
     for i in range(max_retries):
         try:
-            response = litellm.completion(
-                model=model,
+            response = litellm.completion(  #litellm.completion 是 LiteLLM 库提供的统一模型调用接口。
+                model=model,  
                 messages=messages,
                 temperature=0,
             )
+            #拿到模型回复的正文
             content = response.choices[0].message.content
+            #如果需要返回模型结束原因
             if return_finish_reason:
+                #如果模型因为长度限制停止，返回 "max_output_reached"；
+                #否则认为正常完成，返回 "finished"。
                 finish_reason = "max_output_reached" if response.choices[0].finish_reason == "length" else "finished"
                 return content, finish_reason
-            return content
+            return content #不需要返回结束原因  直接返回content
         except Exception as e:
             print('************* Retrying *************')
-            logging.error(f"Error: {e}")
+            logging.error(f"Error: {e}")#记录出错
             if i < max_retries - 1:
                 time.sleep(1)
             else:
@@ -59,7 +77,8 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
                 return ""
 
 
-
+#异步版的LLM调用封装
+#返回模型生成的文本；它主要用于需要并发跑多个模型请求的地方，比如批量生成节点摘要、并发检查标题等。
 async def llm_acompletion(model, prompt):
     if model:
         model = model.removeprefix("litellm/")
@@ -72,6 +91,11 @@ async def llm_acompletion(model, prompt):
                 messages=messages,
                 temperature=0,
             )
+            # response是LLM  返回的完整对象
+            # response.choices 是候选回复列表
+            # response.choices[0]：取第一个回复
+            # response.choices[0].message：取这条回复里的消息对象。
+            # response.choices[0].message.content：取消息里的文本内容
             return response.choices[0].message.content
         except Exception as e:
             print('************* Retrying *************')
