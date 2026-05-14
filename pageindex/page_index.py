@@ -694,8 +694,39 @@ def process_no_toc(page_list, start_index=1, model=None, logger=None):
     #对后续分组继续补充目录：
     toc_with_page_number = convert_physical_index_to_int(toc_with_page_number)
     logger.info(f'convert_physical_index_to_int: {toc_with_page_number}')
+    toc_with_page_number = dedupe_repeated_toc_items(toc_with_page_number, logger=logger)
 
     return toc_with_page_number
+
+
+#新加的去重清洗 
+def dedupe_repeated_toc_items(toc_items, logger=None):
+    """Remove repeated continuation nodes generated for the same section.
+
+    In long no-TOC documents, the model sometimes repeats the same
+    structure/title on later pages to indicate continuation of one section.
+    Keeping those duplicates makes verification fail and can overwrite nodes
+    during tree conversion, so keep the first occurrence only.
+    """
+    cleaned_items = []
+    seen = set()
+    removed_items = []
+    for item in toc_items:
+        key = (
+            str(item.get('structure', '')).strip(),
+            str(item.get('title', '')).strip(),
+        )
+        if key[0] and key[1] and key in seen:
+            removed_items.append(item)
+            continue
+        seen.add(key)
+        cleaned_items.append(item)
+    if removed_items and logger:
+        logger.info({
+            'dedupe_repeated_toc_items_removed_count': len(removed_items),
+            'dedupe_repeated_toc_items_removed': removed_items,
+        })
+    return cleaned_items
 
 
 

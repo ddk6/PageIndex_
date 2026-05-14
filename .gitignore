@@ -8,3 +8,4 @@ logs/
 experiments/
 results/
 uploads/
+*.log
