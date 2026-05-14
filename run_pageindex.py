@@ -94,7 +94,7 @@ if __name__ == "__main__":
         # Save results
         #提取纯 PDF 文件名  从(纯文件名，扩展名) 的元组提取第一个元素也就是不带扩展名的纯文本名
         pdf_name = os.path.splitext(os.path.basename(args.pdf_path))[0]    
-        output_dir = './results'#定义输出目录
+        output_dir = './results/indexes'#定义输出目录
         output_file = f'{output_dir}/{pdf_name}_structure.json'  #拼接完整的输出文件路径
         os.makedirs(output_dir, exist_ok=True)#创建输出目录
         
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         
         # Save results
         md_name = os.path.splitext(os.path.basename(args.md_path))[0]    
-        output_dir = './results'
+        output_dir = './results/indexes'
         output_file = f'{output_dir}/{md_name}_structure.json'
         os.makedirs(output_dir, exist_ok=True)
         

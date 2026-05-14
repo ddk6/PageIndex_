@@ -25,6 +25,21 @@ def _normalize_retrieve_model(model: str) -> str:
     return f"litellm/{model}"
 
 
+
+#把一次性的文档建树函数，包装成一个可管理、可保存、可查询的文档索引客户端。
+#核心流程：
+# PageIndexClient(...)
+#     ↓
+# index(file_path)
+#     ↓
+# page_index(...) / md_to_tree(...)
+#     ↓
+# self.documents[doc_id] = 文档索引结果
+#     ↓
+# 如果有 workspace，就保存成 json
+#     ↓
+# 后续通过 doc_id 查询
+
 class PageIndexClient:
     """
     A client for indexing and retrieving document content.
@@ -32,6 +47,7 @@ class PageIndexClient:
 
     For agent-based QA, see examples/agentic_vectorless_rag_demo.py.
     """
+    #初始化客户端对象
     def __init__(self, api_key: str = None, model: str = None, retrieve_model: str = None, workspace: str = None):
         if api_key:
             os.environ["OPENAI_API_KEY"] = api_key

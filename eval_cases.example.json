@@ -20,10 +20,10 @@
     "must_contain": ["番茄", "成熟度", "检测"]
   },
   {
-    "id": "research_background_value",
-    "question": "为什么番茄成熟度检测具有研究意义？请从生产效率和采摘决策角度回答。",
-    "must_contain": ["生产效率", "最佳收获时间"],
-    "any_contain": ["过早", "过晚", "品质", "产量"]
+    "id": "dataset_source",
+    "question": "这些番茄图片数据是如何形成最终数据集的？请说明三批数据来源、是否人工标注，以及最终数据集总数。",
+    "must_contain": ["三批", "人工标注"],
+    "any_contain": ["4171", "4,171"]
   },
   {
     "id": "dataset_size",
@@ -40,12 +40,12 @@
     "id": "class_labels",
     "question": "本文为了简化任务，把番茄类别固定成哪两类？",
     "must_contain": ["成熟", "非成熟"],
-    "any_contain": ["ripe", "unripe"]
+    "any_contain": ["ripe", "unripe","成熟", "非成熟"]
   },
   {
     "id": "keywords",
     "question": "论文关键词包含哪些技术或任务名称？至少说出四个。",
-    "must_contain": ["YOLOv5", "成熟度检测", "注意力机制", "NWD"],
+    "must_contain": ["YOLOv5", "CBAM", "注意力机制", "NWD"],
     "any_contain": ["C2f", "损失函数"]
   },
   {
@@ -143,5 +143,42 @@
     "question": "本文是否只使用Transformer方法完成番茄成熟度检测？请根据文档回答。",
     "must_contain": ["不是"],
     "any_contain": ["YOLOv5", "CBAM", "Biformer", "C2f", "NWD"]
+  },
+  {
+    "id": "hallucination_no_doi",
+    "question": "这篇论文的DOI是多少？如果文档没有提供，请明确说明不要编造。",
+    "any_contain": ["未提到", "没有提到", "未提供", "没有提供", "无法确定", "文档中没有"],
+    "not_contain": ["10.", "doi.org"]
+  },
+  {
+    "id": "hallucination_no_code_repo",
+    "question": "本文的开源代码仓库地址是什么？如果文档没有提供，请明确说明。",
+    "any_contain": ["未提到", "没有提到", "未提供", "没有提供", "无法确定", "文档中没有"],
+    "not_contain": ["github.com", "gitee.com", "gitlab.com", "http://", "https://"]
+  },
+  {
+    "id": "hallucination_no_gpu_model",
+    "question": "实验训练使用的GPU具体型号和显存是多少？请只根据文档回答，文中没有就说没有。",
+    "any_contain": ["未提到", "没有提到", "未说明", "没有说明", "无法确定", "文档中没有"],
+    "not_contain": ["RTX", "GTX", "A100", "V100", "3090", "4090", "显存为"]
+  },
+  {
+    "id": "hallucination_no_camera_model",
+    "question": "数据采集使用的相机品牌、型号和拍摄地点GPS坐标分别是什么？请不要根据常识补全。",
+    "any_contain": ["未提到", "没有提到", "未说明", "没有说明", "无法确定", "文档中没有"],
+    "not_contain": ["Canon", "Nikon", "Sony", "iPhone", "GPS", "经度", "纬度"]
+  },
+  {
+    "id": "hallucination_wrong_domain_apple",
+    "question": "本文是否报告了苹果成熟度检测的实验结果？如果没有，请说明本文研究对象是什么。",
+    "must_contain": ["没有"],
+    "any_contain": ["番茄", "西红柿"],
+    "not_contain": ["苹果成熟度检测实验结果表明", "苹果数据集"]
+  },
+  {
+    "id": "hallucination_no_deployment_device",
+    "question": "论文最终部署到了哪一款具体嵌入式设备或机器人平台上？请只根据文档回答。",
+    "any_contain": ["未提到", "没有提到", "未说明", "没有说明", "无法确定", "文档中没有"],
+    "not_contain": ["Jetson Nano", "Jetson Xavier", "树莓派", "Raspberry Pi"]
   }
 ]

@@ -535,6 +535,8 @@ def post_processing(structure, end_physical_index):
             node.pop('physical_index', None)
         return structure
 
+        
+
 def clean_structure_post(data):
     if isinstance(data, dict):
         data.pop('page_number', None)
