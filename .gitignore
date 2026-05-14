@@ -4,3 +4,7 @@ __pycache__
 .env*
 .venv/
 logs/
+.idea/
+experiments/
+results/
+uploads/
