@@ -8,6 +8,7 @@ import json
 import PyPDF2
 import copy
 import asyncio
+import threading
 import pymupdf
 from io import BytesIO
 from dotenv import load_dotenv
@@ -69,6 +70,48 @@ def litellm_call_options():
         options["api_base"] = api_base
     return options
 
+def get_llm_min_interval_seconds():
+    return float(os.getenv("LLM_MIN_INTERVAL_SECONDS") or 21)
+
+def get_llm_max_retries():
+    return int(os.getenv("LLM_MAX_RETRIES") or 10)
+
+def is_rate_limit_error(exc):
+    text = str(exc).lower()
+    return "rate limit" in text or "too many requests" in text or "429" in text
+
+_llm_sync_lock = threading.Lock()
+_llm_async_lock = asyncio.Lock()
+_last_llm_call_time = 0.0
+
+def wait_for_llm_rate_limit():
+    """Respect providers with low request-per-minute quotas."""
+    global _last_llm_call_time
+    min_interval = get_llm_min_interval_seconds()
+    if min_interval <= 0:
+        return
+    with _llm_sync_lock:
+        now = time.monotonic()
+        wait_seconds = _last_llm_call_time + min_interval - now
+        if wait_seconds > 0:
+            print(f"⏳ LLM限流等待 {wait_seconds:.1f}s...")
+            time.sleep(wait_seconds)
+        _last_llm_call_time = time.monotonic()
+
+async def await_llm_rate_limit():
+    """Async variant used by concurrent summary/title-check calls."""
+    global _last_llm_call_time
+    min_interval = get_llm_min_interval_seconds()
+    if min_interval <= 0:
+        return
+    async with _llm_async_lock:
+        now = time.monotonic()
+        wait_seconds = _last_llm_call_time + min_interval - now
+        if wait_seconds > 0:
+            print(f"⏳ LLM限流等待 {wait_seconds:.1f}s...")
+            await asyncio.sleep(wait_seconds)
+        _last_llm_call_time = time.monotonic()
+
 litellm.drop_params = True
 
 def count_tokens(text, model=None):
@@ -97,11 +140,12 @@ def count_tokens(text, model=None):
 
 def llm_completion(model, prompt, chat_history=None, return_finish_reason=False):
     model = normalize_litellm_model(model)
-    max_retries = 10#最多的重试次数
+    max_retries = get_llm_max_retries()#最多的重试次数
     #构造messages 聊天消息列表
     messages = list(chat_history) + [{"role": "user", "content": prompt}] if chat_history else [{"role": "user", "content": prompt}]
     for i in range(max_retries):
         try:
+            wait_for_llm_rate_limit()
             response = litellm.completion(  #litellm.completion 是 LiteLLM 库提供的统一模型调用接口。
                 model=model,  
                 messages=messages,
@@ -121,7 +165,10 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
             print('************* Retrying *************')
             logging.error(f"Error: {e}")#记录出错
             if i < max_retries - 1:
-                time.sleep(1)
+                retry_wait = get_llm_min_interval_seconds() if is_rate_limit_error(e) else 1
+                if is_rate_limit_error(e):
+                    print(f"⚠️  触发LLM限流，等待 {retry_wait:.0f}s 后重试 ({i + 1}/{max_retries})...")
+                time.sleep(retry_wait)
             else:
                 logging.error('Max retries reached for prompt: ' + prompt)
                 if return_finish_reason:
@@ -133,10 +180,11 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
 #返回模型生成的文本；它主要用于需要并发跑多个模型请求的地方，比如批量生成节点摘要、并发检查标题等。
 async def llm_acompletion(model, prompt):
     model = normalize_litellm_model(model)
-    max_retries = 10
+    max_retries = get_llm_max_retries()
     messages = [{"role": "user", "content": prompt}]
     for i in range(max_retries):
         try:
+            await await_llm_rate_limit()
             response = await litellm.acompletion(
                 model=model,
                 messages=messages,
@@ -153,7 +201,10 @@ async def llm_acompletion(model, prompt):
             print('************* Retrying *************')
             logging.error(f"Error: {e}")
             if i < max_retries - 1:
-                await asyncio.sleep(1)
+                retry_wait = get_llm_min_interval_seconds() if is_rate_limit_error(e) else 1
+                if is_rate_limit_error(e):
+                    print(f"⚠️  触发LLM限流，等待 {retry_wait:.0f}s 后重试 ({i + 1}/{max_retries})...")
+                await asyncio.sleep(retry_wait)
             else:
                 logging.error('Max retries reached for prompt: ' + prompt)
                 return ""

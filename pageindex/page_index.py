@@ -1147,10 +1147,11 @@ async def verify_toc(page_list, list_result, start_index=1, N=None, model=None):
             last_physical_index = item['physical_index']
             break
     
-    # Early return if we don't have valid physical indices
-    # 如果没有任何有效页码，准确率直接算 0；
-    # 如果最后一个目录项的页码还不到全文一半，也直接算 0。
-    if last_physical_index is None or last_physical_index < len(page_list)/2:
+    # Early return if we don't have valid physical indices.
+    # Do not require the last section title to start after half the document:
+    # patent-like documents often have a final section that starts early and
+    # spans most remaining pages.
+    if last_physical_index is None:
         return 0, []
     
     # Determine which items to check
@@ -1302,9 +1303,11 @@ async def meta_processor(page_list, mode=None, toc_content=None, toc_page_list=N
     #如果完全正确，说明目录页码全部验证通过，直接返回。
     if accuracy == 1.0 and len(incorrect_results) == 0:
         return toc_with_page_number
-    #如果准确率还可以，但有少量错误：
-    if accuracy > 0.6 and len(incorrect_results) > 0:
-        toc_with_page_number, incorrect_results = await fix_incorrect_toc_with_retries(toc_with_page_number, page_list, incorrect_results,start_index=start_index, max_attempts=3, model=opt.model, logger=logger)
+    verify_threshold = float(os.getenv("TOC_VERIFY_FIX_THRESHOLD") or 0.4)
+    #如果准确率还可以，接受当前目录；有少量错误时尝试修复。
+    if accuracy >= verify_threshold:
+        if len(incorrect_results) > 0:
+            toc_with_page_number, incorrect_results = await fix_incorrect_toc_with_retries(toc_with_page_number, page_list, incorrect_results,start_index=start_index, max_attempts=3, model=opt.model, logger=logger)
         return toc_with_page_number
     #如果准确率太低：说明当前方法不靠谱，要换一种更保守的方法
     else:
