@@ -4,9 +4,10 @@ import os
 import asyncio
 import sys
 import re
+import time
 import unicodedata
 from collections import Counter
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, RateLimitError
 from dotenv import load_dotenv
 
 
@@ -67,6 +68,8 @@ config = {
     "EXPAND_NEIGHBORS": 1,
     "EXPAND_PARENT": True,
     "TEMPERATURE": 0,
+    "LLM_MIN_INTERVAL_SECONDS": float(os.getenv("LLM_MIN_INTERVAL_SECONDS") or 21),
+    "LLM_MAX_RETRIES": int(os.getenv("LLM_MAX_RETRIES") or 5),
     "SHOW_CONTEXT_PREVIEW": True,
     "CONTEXT_PREVIEW_LENGTH": 800,
     "SHOW_DEBUG_INFO": True
@@ -83,6 +86,8 @@ global_doc = None  # 现在存储的是整个文档对象
 global_node_map = None  # 预先生成的node_id到节点的映射
 global_parent_map = {}
 global_node_order = []
+llm_rate_limit_lock = asyncio.Lock()
+last_llm_call_time = 0.0
 
 # ====================== Unicode清理函数 ======================
 def clean_unicode(text):
@@ -523,18 +528,41 @@ def try_answer_wrong_premise_from_context(query, context):
     return f"没有。本文没有报告{target}的实验结果；根据上下文，本文研究对象是{subject}，主题是{true_task}。"
 # ==============================================================
 
+async def wait_for_llm_rate_limit():
+    """ModelArts currently limits this key to 3 requests/minute."""
+    global last_llm_call_time
+    min_interval = float(config.get("LLM_MIN_INTERVAL_SECONDS", 0) or 0)
+    async with llm_rate_limit_lock:
+        now = time.monotonic()
+        wait_seconds = last_llm_call_time + min_interval - now
+        if wait_seconds > 0:
+            if config["SHOW_DEBUG_INFO"]:
+                print(f"⏳ LLM限流等待 {wait_seconds:.1f}s...")
+            await asyncio.sleep(wait_seconds)
+        last_llm_call_time = time.monotonic()
+
 async def call_llm(prompt, temperature=None):
     if temperature is None:
         temperature = config["TEMPERATURE"]
     
     prompt = clean_unicode(prompt)
-    
-    response = await client.chat.completions.create(
-        model=normalize_chat_model(config["MODEL_NAME"]),
-        messages=[{"role": "user", "content": prompt}],
-        temperature=temperature
-    )
-    return response.choices[0].message.content.strip()
+
+    max_retries = int(config.get("LLM_MAX_RETRIES", 5) or 1)
+    for attempt in range(1, max_retries + 1):
+        await wait_for_llm_rate_limit()
+        try:
+            response = await client.chat.completions.create(
+                model=normalize_chat_model(config["MODEL_NAME"]),
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature
+            )
+            return response.choices[0].message.content.strip()
+        except RateLimitError as exc:
+            if attempt >= max_retries:
+                raise
+            retry_wait = max(float(config.get("LLM_MIN_INTERVAL_SECONDS", 21) or 21), 21)
+            print(f"⚠️  触发LLM限流，等待 {retry_wait:.0f}s 后重试 ({attempt}/{max_retries})...")
+            await asyncio.sleep(retry_wait)
 
 async def tree_search(query):
     """基于树结构的推理式检索（已适配你的JSON结构）"""
