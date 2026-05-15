@@ -8,6 +8,22 @@ import unicodedata
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
+
+# 用户问题
+#   ↓
+# classify_query_type 本地判断问题类型
+#   ↓
+# tree_search
+#   ├─ 元信息/数字问题：本地检索
+#   └─ 普通问题：LLM 选 node_id
+#   ↓
+# retrieve_context 本地提取上下文
+#   ↓
+# answer_question
+#   ├─ 特定作者/数值问题：本地直接回答
+#   └─ 普通问题：LLM 基于上下文生成答案
+
+
 # 加载环境变量
 load_dotenv()
 
@@ -312,7 +328,12 @@ def is_metadata_query(query):
     """作者、题名、学校等文档级元信息通常在首页，不一定进入章节摘要"""
     metadata_terms = [
         "作者", "谁写", "谁的", "姓名", "题目", "题名", "标题",
-        "学校", "学院", "专业", "导师", "指导教师", "毕业论文"
+        "学校", "学院", "专业", "导师", "指导教师", "毕业论文",
+        # 专利首页元数据通常不在正文目录节点中，命中这些词时优先检索文档开头节点。
+        "授权公告号", "公告号", "申请号", "申请公布号", "公布号",
+        "申请日", "授权公告日", "优先权", "专利权人", "发明人",
+        "代理机构", "代理师", "专利代理师", "Int.Cl", "分类号",
+        "国际专利分类", "审查员", "发明名称"
     ]
     return any(term in query for term in metadata_terms)
 

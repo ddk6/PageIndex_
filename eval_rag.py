@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 
 test_rag = None
+DEFAULT_CASES_PATH = os.path.join("eval_cases", "eval_cases.example.json")
 
 
 def load_test_rag():
@@ -25,6 +26,16 @@ def as_list(value):
     if isinstance(value, list):
         return value
     return [value]
+
+
+def resolve_cases_path(cases_path):
+    if os.path.exists(cases_path):
+        return cases_path
+    if not os.path.dirname(cases_path):
+        nested_path = os.path.join("eval_cases", cases_path)
+        if os.path.exists(nested_path):
+            return nested_path
+    return cases_path
 
 
 def deterministic_grade(answer, case):
@@ -146,7 +157,7 @@ async def run_case(case, judge_mode="hybrid"):
 
 async def main():
     parser = argparse.ArgumentParser(description="Batch evaluate test_rag.py RAG answers.")
-    parser.add_argument("--cases", default="eval_cases.example.json", help="Path to eval cases JSON")
+    parser.add_argument("--cases", default=DEFAULT_CASES_PATH, help="Path to eval cases JSON")
     parser.add_argument("--json-path", default=None, help="Override test_rag config JSON_PATH")
     parser.add_argument("--output", default=None, help="Path to save eval result JSON")
     parser.add_argument(
@@ -169,7 +180,8 @@ async def main():
         rag.config["SHOW_DEBUG_INFO"] = False
         rag.config["SHOW_CONTEXT_PREVIEW"] = False
 
-    with open(args.cases, "r", encoding="utf-8") as f:
+    cases_path = resolve_cases_path(args.cases)
+    with open(cases_path, "r", encoding="utf-8") as f:
         cases = json.load(f)
 
     if not await rag.load_document():
@@ -196,7 +208,7 @@ async def main():
         "summary": summary,
         "config": {
             "json_path": rag.config["JSON_PATH"],
-            "cases": args.cases,
+            "cases": cases_path,
             "judge": args.judge,
         },
         "results": results,
