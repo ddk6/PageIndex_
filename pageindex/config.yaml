@@ -1,6 +1,6 @@
-model: "deepseek/deepseek-chat"
+model: "openai/deepseek-v4-flash"
 # model: "anthropic/claude-sonnet-4-6"
-retrieve_model: "deepseek/deepseek-chat"  # defaults to `model` if not set
+retrieve_model: "openai/deepseek-v4-flash"  # defaults to `model` if not set
 toc_check_page_num: 20
 max_page_num_each_node: 10
 max_token_num_each_node: 20000

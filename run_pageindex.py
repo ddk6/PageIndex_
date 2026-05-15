@@ -11,6 +11,7 @@ if __name__ == "__main__":
     # Set up argument parser
     #解析命令行参数  定义你可以在命令行里传哪些参数      命令行参数最后都变成了 args.xxx
     #parser.add_argument(...) 是在“声明这个脚本支持哪些命令行参数”。
+    #parser是argparse.ArgumentParser 类的实例对象，负责定义、解析命令行参数
     parser = argparse.ArgumentParser(description='Process PDF or Markdown document and generate structure')
     parser.add_argument('--pdf_path', type=str, help='Path to the PDF file')
     parser.add_argument('--md_path', type=str, help='Path to the Markdown file')

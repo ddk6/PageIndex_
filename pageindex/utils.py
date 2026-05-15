@@ -21,12 +21,64 @@ from types import SimpleNamespace as config
 if not os.getenv("OPENAI_API_KEY") and os.getenv("CHATGPT_API_KEY"):
     os.environ["OPENAI_API_KEY"] = os.getenv("CHATGPT_API_KEY")
 
+DEFAULT_MODELARTS_CHAT_URL = "https://api.modelarts-maas.com/v2/chat/completions"
+
+def normalize_chat_base_url(url):
+    """OpenAI SDK/LiteLLM need the API base, not the full chat completions URL."""
+    if not url:
+        return None
+    url = url.rstrip("/")
+    suffix = "/chat/completions"
+    if url.endswith(suffix):
+        return url[:-len(suffix)]
+    return url
+
+def get_llm_api_key():
+    return (
+        os.getenv("MODELARTS_API_KEY")
+        or os.getenv("LLM_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("CHATGPT_API_KEY")
+    )
+
+def get_llm_api_base():
+    return normalize_chat_base_url(
+        os.getenv("MODELARTS_API_BASE")
+        or os.getenv("MODELARTS_CHAT_COMPLETIONS_URL")
+        or os.getenv("LLM_API_BASE")
+        or os.getenv("OPENAI_API_BASE")
+        or os.getenv("OPENAI_BASE_URL")
+        or DEFAULT_MODELARTS_CHAT_URL
+    )
+
+def normalize_litellm_model(model):
+    if not model:
+        return model
+    model = model.removeprefix("litellm/")
+    if get_llm_api_base() and "/" not in model:
+        return f"openai/{model}"
+    return model
+
+def litellm_call_options():
+    options = {}
+    api_key = get_llm_api_key()
+    api_base = get_llm_api_base()
+    if api_key:
+        options["api_key"] = api_key
+    if api_base:
+        options["api_base"] = api_base
+    return options
+
 litellm.drop_params = True
 
 def count_tokens(text, model=None):
     if not text:
         return 0
-    return litellm.token_counter(model=model, text=text)
+    try:
+        return litellm.token_counter(model=normalize_litellm_model(model), text=text)
+    except Exception:
+        # Custom OpenAI-compatible models may not be known to LiteLLM's tokenizer.
+        return max(1, len(str(text)) // 4)
 
 
 #负责真正请求模型接口
@@ -44,8 +96,7 @@ def count_tokens(text, model=None):
 # return_finish_reason：是否同时返回模型结束原因。
 
 def llm_completion(model, prompt, chat_history=None, return_finish_reason=False):
-    if model:
-        model = model.removeprefix("litellm/")
+    model = normalize_litellm_model(model)
     max_retries = 10#最多的重试次数
     #构造messages 聊天消息列表
     messages = list(chat_history) + [{"role": "user", "content": prompt}] if chat_history else [{"role": "user", "content": prompt}]
@@ -55,6 +106,7 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
                 model=model,  
                 messages=messages,
                 temperature=0,
+                **litellm_call_options(),
             )
             #拿到模型回复的正文
             content = response.choices[0].message.content
@@ -80,8 +132,7 @@ def llm_completion(model, prompt, chat_history=None, return_finish_reason=False)
 #异步版的LLM调用封装
 #返回模型生成的文本；它主要用于需要并发跑多个模型请求的地方，比如批量生成节点摘要、并发检查标题等。
 async def llm_acompletion(model, prompt):
-    if model:
-        model = model.removeprefix("litellm/")
+    model = normalize_litellm_model(model)
     max_retries = 10
     messages = [{"role": "user", "content": prompt}]
     for i in range(max_retries):
@@ -90,6 +141,7 @@ async def llm_acompletion(model, prompt):
                 model=model,
                 messages=messages,
                 temperature=0,
+                **litellm_call_options(),
             )
             # response是LLM  返回的完整对象
             # response.choices 是候选回复列表
@@ -468,7 +520,7 @@ def get_page_tokens(pdf_path, model=None, pdf_parser="PyPDF2"):
         for page_num in range(len(pdf_reader.pages)):
             page = pdf_reader.pages[page_num]
             page_text = page.extract_text()
-            token_length = litellm.token_counter(model=model, text=page_text)
+            token_length = count_tokens(page_text, model=model)
             page_list.append((page_text, token_length))
         return page_list
     elif pdf_parser == "PyMuPDF":
@@ -480,7 +532,7 @@ def get_page_tokens(pdf_path, model=None, pdf_parser="PyPDF2"):
         page_list = []
         for page in doc:
             page_text = page.get_text()
-            token_length = litellm.token_counter(model=model, text=page_text)
+            token_length = count_tokens(page_text, model=model)
             page_list.append((page_text, token_length))
         return page_list
     else:
@@ -802,4 +854,3 @@ def print_tree(tree, indent=0):
 def print_wrapped(text, width=100):
     for line in text.splitlines():
         print(textwrap.fill(line, width=width))
-

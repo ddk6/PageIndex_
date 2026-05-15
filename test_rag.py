@@ -28,10 +28,39 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 
+DEFAULT_MODELARTS_CHAT_URL = "https://api.modelarts-maas.com/v2/chat/completions"
+
+def normalize_chat_base_url(url):
+    """OpenAI SDK expects the API base URL, not the full /chat/completions URL."""
+    if not url:
+        return None
+    url = url.rstrip("/")
+    suffix = "/chat/completions"
+    if url.endswith(suffix):
+        return url[:-len(suffix)]
+    return url
+
+def normalize_chat_model(model):
+    return str(model or "").removeprefix("litellm/").removeprefix("openai/")
+
+def get_chat_api_key(api_base_url=None):
+    api_key = os.getenv("MODELARTS_API_KEY") or os.getenv("LLM_API_KEY")
+    if api_key:
+        return api_key
+    if api_base_url and "deepseek.com" in api_base_url:
+        return os.getenv("DEEPSEEK_API_KEY")
+    return os.getenv("OPENAI_API_KEY")
+
 # 全局配置
 config = {
     "JSON_PATH": "./results/indexes/Yolov5_structure.json",
-    "MODEL_NAME": "deepseek-chat",
+    "MODEL_NAME": normalize_chat_model(os.getenv("RAG_MODEL_NAME") or os.getenv("MODELARTS_MODEL") or "deepseek-v4-flash"),
+    "API_BASE_URL": normalize_chat_base_url(
+        os.getenv("RAG_API_BASE")
+        or os.getenv("MODELARTS_API_BASE")
+        or os.getenv("MODELARTS_CHAT_COMPLETIONS_URL")
+        or DEFAULT_MODELARTS_CHAT_URL
+    ),
     "MAX_NODES": 3,
     "METADATA_NODE_COUNT": 2,
     "EXPAND_CONTEXT": True,
@@ -45,8 +74,8 @@ config = {
 
 # 初始化LLM客户端
 client = AsyncOpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com/v1"
+    api_key=get_chat_api_key(config["API_BASE_URL"]),
+    base_url=config["API_BASE_URL"]
 )
 
 # 全局变量
@@ -501,7 +530,7 @@ async def call_llm(prompt, temperature=None):
     prompt = clean_unicode(prompt)
     
     response = await client.chat.completions.create(
-        model=config["MODEL_NAME"],
+        model=normalize_chat_model(config["MODEL_NAME"]),
         messages=[{"role": "user", "content": prompt}],
         temperature=temperature
     )
