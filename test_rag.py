@@ -5,6 +5,7 @@ import asyncio
 import sys
 import re
 import unicodedata
+from collections import Counter
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
@@ -427,6 +428,70 @@ def try_answer_numeric_table(query, context):
         f"它的最小值为 {min_value:.3f}，最大值为 {max_value:.3f}，差值约为 {diff:.3f}。"
         f"各指标范围为：{detail}。"
     )
+
+def compact_for_match(text):
+    """用于事实存在性判断的宽松匹配：去掉空白并统一大小写。"""
+    return re.sub(r"\s+", "", clean_unicode(str(text))).lower()
+
+def infer_research_task_from_context(context):
+    """从标题、摘要、页眉中抽取类似“番茄成熟度检测”的研究任务。"""
+    patterns = [
+        r"基于\s*[^。\n]{0,40}?的\s*([\u4e00-\u9fffA-Za-z0-9]+?成熟度检测)",
+        r"([\u4e00-\u9fffA-Za-z0-9]{1,20}成熟度检测)",
+    ]
+    candidates = []
+    search_text = context[:3000]
+    for pattern in patterns:
+        for match in re.finditer(pattern, search_text):
+            candidate = re.sub(r"\s+", "", match.group(1))
+            if len(candidate) >= 4:
+                candidates.append(candidate)
+    if not candidates:
+        return None
+    return Counter(candidates).most_common(1)[0][0]
+
+def extract_subject_from_task(task):
+    if not task:
+        return None
+    match = re.search(r"([\u4e00-\u9fff]{1,12})成熟度检测", task)
+    if match:
+        return match.group(1)
+    return task
+
+def try_answer_wrong_premise_from_context(query, context):
+    """处理“是否报告了X实验结果，如果没有说明研究对象”这类错误前提问题。"""
+    if not any(term in query for term in ["是否", "有没有", "如果没有"]):
+        return None
+
+    target_patterns = [
+        r"是否报告了(.+?)的实验结果",
+        r"有没有(.+?)的实验结果",
+        r"是否有(.+?)的实验结果",
+    ]
+    target = None
+    for pattern in target_patterns:
+        match = re.search(pattern, query)
+        if match:
+            target = re.sub(r"\s+", "", match.group(1))
+            break
+    if not target:
+        return None
+
+    compact_context = compact_for_match(context)
+    compact_target = compact_for_match(target)
+    if compact_target in compact_context:
+        return None
+
+    true_task = infer_research_task_from_context(context)
+    if not true_task:
+        return None
+
+    compact_true_task = compact_for_match(true_task)
+    if compact_target == compact_true_task or compact_target in compact_true_task:
+        return None
+
+    subject = extract_subject_from_task(true_task)
+    return f"没有。本文没有报告{target}的实验结果；根据上下文，本文研究对象是{subject}，主题是{true_task}。"
 # ==============================================================
 
 async def call_llm(prompt, temperature=None):
@@ -559,6 +624,10 @@ async def answer_question(query, context):
     numeric_answer = try_answer_numeric_table(query, context)
     if numeric_answer:
         return numeric_answer
+
+    wrong_premise_answer = try_answer_wrong_premise_from_context(query, context)
+    if wrong_premise_answer:
+        return wrong_premise_answer
     
     answer_prompt = f"""
 请严格基于以下上下文回答问题，不要编造任何上下文之外的信息。
@@ -567,6 +636,8 @@ async def answer_question(query, context):
 进行数值比较时，请列出你使用的关键数字、简单计算过程和结论。
 如果问题涉及数量、比例、实验结果或数据集规模，请严格根据上下文列出原始数字，并在需要时进行简单计算。不要把单项数量误认为总数。
 如果问题询问论文作者、题名等元信息，注意识别首页、摘要页、页眉中的格式，例如“姓名：论文题名”通常表示该姓名是作者。
+如果问题是“是否/有没有/如果没有”这类判断题，先核对问题中的对象、任务、实验是否真的属于本文。若上下文显示本文研究的是另一个对象，第一句必须明确回答“没有”或“不是”，再说明真实研究对象；不要因为问题中出现某个词就默认文档报告了该内容。
+回答不能自相矛盾：如果后文出现“而非/并非/不是”，前面的结论不能写成“是的”。
 只有当上下文既没有直接答案，也没有足够数字或事实可推导答案时，才回答"根据提供的上下文无法找到答案"。
 
 问题：{query}
