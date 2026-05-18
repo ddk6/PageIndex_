@@ -10,6 +10,11 @@ from collections import Counter
 from openai import AsyncOpenAI, RateLimitError
 from dotenv import load_dotenv
 
+try:
+    from pageindex.retrieve import extract_patent_metadata
+except ImportError:
+    extract_patent_metadata = None
+
 
 # 用户问题
 #   ↓
@@ -86,6 +91,7 @@ global_doc = None  # 现在存储的是整个文档对象
 global_node_map = None  # 预先生成的node_id到节点的映射
 global_parent_map = {}
 global_node_order = []
+global_patent_metadata = None
 llm_rate_limit_lock = asyncio.Lock()
 last_llm_call_time = 0.0
 
@@ -366,9 +372,10 @@ def is_metadata_query(query):
         "学校", "学院", "专业", "导师", "指导教师", "毕业论文",
         # 专利首页元数据通常不在正文目录节点中，命中这些词时优先检索文档开头节点。
         "授权公告号", "公告号", "申请号", "申请公布号", "公布号",
-        "申请日", "授权公告日", "优先权", "专利权人", "发明人",
+        "申请日", "公告日", "授权公告日", "申请公布日", "优先权", "专利权人", "申请人", "发明人",
         "代理机构", "代理师", "专利代理师", "Int.Cl", "分类号",
-        "国际专利分类", "审查员", "发明名称"
+        "国际专利分类", "审查员", "发明名称", "文件名", "PDF", "总页数",
+        "权利要求书", "说明书", "附图", "序列表"
     ]
     return any(term in query for term in metadata_terms)
 
@@ -386,6 +393,116 @@ def metadata_tree_search(query):
         "thinking": "这是作者、题名、学校等文档级元信息问题。此类信息通常位于首页、摘要页或页眉中，因此优先检索文档开头节点。",
         "node_list": node_list
     }
+
+def get_patent_metadata_cache():
+    """提取并缓存专利首页元信息，避免每个元信息问题都调用回答LLM。"""
+    global global_patent_metadata
+    if global_patent_metadata is not None:
+        return global_patent_metadata
+    if not extract_patent_metadata or not global_doc:
+        return None
+    global_patent_metadata = extract_patent_metadata(global_doc)
+    return global_patent_metadata
+
+def present_value(value):
+    if value in (None, "", []):
+        return "未提取到"
+    if isinstance(value, list):
+        return "、".join(str(item) for item in value) if value else "未提取到"
+    return str(value)
+
+def try_answer_patent_metadata(query):
+    metadata = get_patent_metadata_cache()
+    if not metadata:
+        return None
+
+    query_compact = compact_for_match(query)
+    answers = []
+
+    def wants(*terms):
+        return any(compact_for_match(term) in query_compact for term in terms)
+
+    asks_page_breakdown = any(term in query for term in ["权利要求书", "说明书", "附图", "序列表"])
+    asks_basic_doc = wants("PDF总页数", "总页数", "文件名")
+    asks_title = wants("发明名称", "文档标题", "题目", "标题")
+    asks_numbers = wants("授权公告号", "申请号", "申请公布号", "公告号", "公布号")
+    asks_dates = wants("申请日", "申请公布日", "授权公告日", "公告日")
+    asks_people = wants("申请人", "专利权人", "发明人")
+    asks_priority = wants("优先权")
+    asks_agency = wants("代理机构", "代理师", "专利代理师")
+
+    if wants("元信息", "metadata"):
+        keys = [
+            "doc_name", "page_count", "title", "application_number",
+            "publication_number", "grant_number", "application_date",
+            "publication_date", "grant_date", "applicant", "inventors",
+            "claims_pages", "description_pages", "sequence_listing_pages",
+            "drawings_pages",
+        ]
+        return json.dumps({key: metadata.get(key) for key in keys}, ensure_ascii=False)
+
+    if asks_basic_doc:
+        if wants("文件名"):
+            answers.append(f"文件名是{present_value(metadata.get('doc_name'))}。")
+        if wants("PDF总页数", "总页数"):
+            answers.append(f"PDF总页数约为{present_value(metadata.get('page_count'))}页。")
+
+    if asks_title:
+        answers.append(f"发明名称是{present_value(metadata.get('title'))}。")
+
+    if asks_numbers:
+        if wants("授权公告号", "公告号"):
+            answers.append(f"授权公告号是{present_value(metadata.get('grant_number'))}。")
+        if wants("申请号"):
+            answers.append(f"申请号是{present_value(metadata.get('application_number'))}。")
+        if wants("申请公布号", "公布号"):
+            answers.append(f"申请公布号是{present_value(metadata.get('publication_number'))}。")
+        if "末尾" in query and ("代码" in query or "文献种类" in query):
+            grant_code = str(metadata.get("grant_number") or "")[-1:] or "未提取到"
+            pub_code = str(metadata.get("publication_number") or "")[-1:] or "未提取到"
+            answers.append(f"授权公告号末尾代码是{grant_code}，申请公布号末尾代码是{pub_code}。")
+
+    if asks_dates:
+        if wants("申请日"):
+            answers.append(f"申请日是{present_value(metadata.get('application_date'))}。")
+        if wants("申请公布日"):
+            answers.append(f"申请公布日是{present_value(metadata.get('publication_date'))}。")
+        if wants("授权公告日", "公告日"):
+            answers.append(f"授权公告日是{present_value(metadata.get('grant_date'))}。")
+
+    if asks_people:
+        if wants("申请人", "专利权人"):
+            applicant = present_value(metadata.get("applicant"))
+            address = metadata.get("applicant_address")
+            if address:
+                answers.append(f"专利权人/申请人是{applicant}，地址为{present_value(address)}。")
+            else:
+                answers.append(f"专利权人/申请人是{applicant}。")
+        if wants("发明人"):
+            answers.append(f"发明人包括{present_value(metadata.get('inventors'))}。")
+
+    if asks_page_breakdown:
+        answers.append(
+            "首页页数信息为："
+            f"权利要求书{present_value(metadata.get('claims_pages'))}页，"
+            f"说明书{present_value(metadata.get('description_pages'))}页，"
+            f"序列表{present_value(metadata.get('sequence_listing_pages'))}页，"
+            f"附图{present_value(metadata.get('drawings_pages'))}页。"
+        )
+
+    if asks_priority:
+        answers.append(
+            f"优先权数据是{present_value(metadata.get('priority_number'))}，"
+            f"日期是{present_value(metadata.get('priority_date'))}。"
+        )
+
+    if asks_agency:
+        if wants("代理机构"):
+            answers.append(f"代理机构是{present_value(metadata.get('agency'))}。")
+        if wants("代理师", "专利代理师"):
+            answers.append(f"专利代理师是{present_value(metadata.get('agents'))}。")
+
+    return "".join(answers) if answers else None
 
 def try_answer_author_from_context(query, context):
     """从常见中文论文页眉格式中直接抽取作者"""
@@ -671,6 +788,10 @@ def retrieve_context(query, node_ids):
     return extract_context(node_ids), node_ids
 
 async def answer_question(query, context):
+    patent_metadata_answer = try_answer_patent_metadata(query)
+    if patent_metadata_answer:
+        return patent_metadata_answer
+
     if not context.strip():
         return "❌ 错误：没有提取到任何上下文内容"
 
@@ -824,11 +945,12 @@ def editable_input(prompt):
 
 async def load_document():
     """加载整个文档对象（已适配你的JSON结构）"""
-    global global_doc, global_node_map, global_parent_map, global_node_order
+    global global_doc, global_node_map, global_parent_map, global_node_order, global_patent_metadata
     try:
         print(f"📂 正在加载文档：{config['JSON_PATH']}...")
         with open(config["JSON_PATH"], "r", encoding="utf-8", errors="replace") as f:
             global_doc = json.load(f)
+        global_patent_metadata = None
         
         print("🧹 正在清理文档中的无效字符...")
         global_doc["structure"] = [clean_node(node) for node in global_doc["structure"]]

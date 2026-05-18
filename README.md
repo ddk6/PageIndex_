@@ -202,6 +202,34 @@ python3 run_pageindex.py --md_path /path/to/your/document.md
 > Note: in this mode, we use "#" to determine node headings and their levels. For example, "##" is level 2, "###" is level 3, etc. Make sure your markdown file is formatted correctly. If your Markdown file was converted from a PDF or HTML, we don't recommend using this mode, since most existing conversion tools cannot preserve the original hierarchy. Instead, use our [PageIndex OCR](https://pageindex.ai/blog/ocr), which is designed to preserve the original hierarchy, to convert the PDF to a markdown file and then use this mode.
 </details>
 
+### Retrieval Evaluation
+
+You can evaluate retrieval quality separately from final answer quality with Precision, Recall, F1, MAP, MRR, and NDCG:
+
+```bash
+python eval_retrieval.py --json-path results/indexes/Yolov5_structure.json --cases eval_cases/eval_cases.retrieval.example.json --ks 1,3,5 --include-context --quiet-rag
+```
+
+Each retrieval case should include a `question` plus at least one relevance label:
+
+```json
+{
+  "id": "table5_metrics_retrieval",
+  "question": "表5中加入NWD+C2f模块后的all类别指标大致是多少？",
+  "relevant_node_ids": { "0035": 2 },
+  "relevant_pages": ["17-18"],
+  "relevant_titles": ["各阶段改进模型的综合实验对比"]
+}
+```
+
+`relevant_node_ids` is the most precise option and supports graded relevance for NDCG. `relevant_pages` maps page ranges to overlapping nodes, and `relevant_titles` matches node titles fuzzily.
+
+The report separates stages:
+
+- `retrieval_stage`: evaluates the raw node ranking returned by tree search.
+- `context_stage`: evaluates the expanded context nodes passed into answer generation when `--include-context` is enabled.
+- `answer_generation_stage`: reported by `eval_rag.py`, covering final answer accuracy plus refusal accuracy and deterministic hallucination checks from `not_contain`.
+
 ## Agentic Vectorless RAG: An Example
 
 For a simple, end-to-end _**agentic vectorless RAG**_ example using PageIndex with OpenAI Agents SDK, see [`examples/agentic_vectorless_rag_demo.py`](examples/agentic_vectorless_rag_demo.py).

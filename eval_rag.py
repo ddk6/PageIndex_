@@ -64,6 +64,43 @@ def deterministic_grade(answer, case):
     }
 
 
+def forbidden_hits(answer, case):
+    answer_norm = normalize_text(answer)
+    return [
+        normalize_text(item)
+        for item in as_list(case.get("not_contain"))
+        if normalize_text(item) in answer_norm
+    ]
+
+
+def is_refusal_case(case):
+    if case.get("expect_refusal") is True or case.get("answerable") is False:
+        return True
+
+    case_id = str(case.get("id", "")).lower()
+    if any(token in case_id for token in ("hallucination", "no_", "not_provided", "unanswerable")):
+        return True
+
+    question = str(case.get("question", ""))
+    refusal_markers = [
+        "如果文档没有",
+        "如果没有",
+        "没有提供",
+        "未提供",
+        "没有提到",
+        "未提到",
+        "无法确定",
+        "不要编造",
+        "不要根据常识",
+        "请只根据文档",
+        "上下文没有",
+        "是否提供",
+        "是否给出",
+        "是否说明",
+    ]
+    return any(marker in question for marker in refusal_markers)
+
+
 async def llm_grade(answer, case, contains_result=None):
     rag = load_test_rag()
     expected = case.get("expected") or {
@@ -142,6 +179,11 @@ async def run_case(case, judge_mode="hybrid"):
     context, context_node_ids = rag.retrieve_context(question, node_list)
     answer = await rag.answer_question(question, context)
     grade = await grade_answer(answer, case, judge_mode)
+    answer_stage = {
+        "is_refusal_case": is_refusal_case(case),
+        "has_not_contain_check": bool(as_list(case.get("not_contain"))),
+        "forbidden_hits": forbidden_hits(answer, case),
+    }
 
     return {
         "id": case.get("id", question),
@@ -152,6 +194,44 @@ async def run_case(case, judge_mode="hybrid"):
         "node_list": node_list,
         "context_node_list": context_node_ids,
         "answer": answer,
+        "answer_stage": answer_stage,
+    }
+
+
+def build_summary(results):
+    passed_count = sum(1 for item in results if item["passed"])
+    answer_stage = {
+        "total": len(results),
+        "passed": passed_count,
+        "failed": len(results) - passed_count,
+        "accuracy": passed_count / len(results) if results else 0,
+    }
+
+    refusal_results = [item for item in results if item.get("answer_stage", {}).get("is_refusal_case")]
+    refusal_passed = sum(1 for item in refusal_results if item["passed"])
+    answer_stage["refusal_total"] = len(refusal_results)
+    answer_stage["refusal_passed"] = refusal_passed
+    answer_stage["refusal_accuracy"] = refusal_passed / len(refusal_results) if refusal_results else 0
+
+    not_contain_results = [
+        item for item in results
+        if item.get("answer_stage", {}).get("has_not_contain_check")
+    ]
+    forbidden_hit_results = [
+        item for item in not_contain_results
+        if item.get("answer_stage", {}).get("forbidden_hits")
+    ]
+    answer_stage["hallucination_check_total"] = len(not_contain_results)
+    answer_stage["forbidden_hit_total"] = len(forbidden_hit_results)
+    answer_stage["forbidden_hit_rate"] = len(forbidden_hit_results) / len(not_contain_results) if not_contain_results else 0
+    answer_stage["deterministic_hallucination_rate"] = answer_stage["forbidden_hit_rate"]
+
+    return {
+        "total": len(results),
+        "passed": passed_count,
+        "failed": len(results) - passed_count,
+        "accuracy": passed_count / len(results) if results else 0,
+        "answer_generation_stage": answer_stage,
     }
 
 
@@ -196,13 +276,7 @@ async def main():
         print(f"{status} [{result['grade_method']}]: {result['grade_reason']}")
         print(f"Answer: {result['answer']}")
 
-    passed_count = sum(1 for item in results if item["passed"])
-    summary = {
-        "total": len(results),
-        "passed": passed_count,
-        "failed": len(results) - passed_count,
-        "accuracy": passed_count / len(results) if results else 0,
-    }
+    summary = build_summary(results)
 
     payload = {
         "summary": summary,
@@ -228,6 +302,12 @@ async def main():
     print(f"Passed: {summary['passed']}")
     print(f"Failed: {summary['failed']}")
     print(f"Accuracy: {summary['accuracy']:.2%}")
+    answer_stage = summary["answer_generation_stage"]
+    print("\n[answer_generation_stage]")
+    print(f"Refusal total: {answer_stage['refusal_total']}")
+    print(f"Refusal accuracy: {answer_stage['refusal_accuracy']:.2%}")
+    print(f"Hallucination check total: {answer_stage['hallucination_check_total']}")
+    print(f"Forbidden hit rate: {answer_stage['forbidden_hit_rate']:.2%}")
     print(f"Saved: {output_path}")
 
     failed_results = [item for item in results if not item["passed"]]
